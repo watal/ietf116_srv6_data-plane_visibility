@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags -target xdp ../../src/main.c -- -I /usr/include/x86_64-linux-gnu -I ../../src
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags -target xdp ../../src/main.c -- -I /usr/include/x86_64-linux-gnu -I ../../src/
 
 func ReadXdpObjects(ops *ebpf.CollectionOptions) (*xdpObjects, error) {
 	obj := &xdpObjects{}
@@ -21,3 +21,11 @@ func ReadXdpObjects(ops *ebpf.CollectionOptions) (*xdpObjects, error) {
 
 	return obj, nil
 }
+
+const (
+	XDP_ABORTED uint32 = iota
+	XDP_DROP
+	XDP_PASS
+	XDP_TX
+	XDP_REDIRECT
+)

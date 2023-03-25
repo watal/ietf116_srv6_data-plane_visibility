@@ -13,6 +13,15 @@ import (
 	"github.com/cilium/ebpf"
 )
 
+type xdpProbeData struct {
+	H_dest    [6]uint8
+	H_source  [6]uint8
+	H_proto   uint16
+	_         [2]byte
+	V6Srcaddr struct{ In6U struct{ U6Addr8 [16]uint8 } }
+	V6Dstaddr struct{ In6U struct{ U6Addr8 [16]uint8 } }
+}
+
 // loadXdp returns the embedded CollectionSpec for xdp.
 func loadXdp() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_XdpBytes)
@@ -61,6 +70,7 @@ type xdpProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type xdpMapSpecs struct {
+	IpfixProbeMap *ebpf.MapSpec `ebpf:"ipfix_probe_map"`
 }
 
 // xdpObjects contains all objects after they have been loaded into the kernel.
@@ -82,10 +92,13 @@ func (o *xdpObjects) Close() error {
 //
 // It can be passed to loadXdpObjects or ebpf.CollectionSpec.LoadAndAssign.
 type xdpMaps struct {
+	IpfixProbeMap *ebpf.Map `ebpf:"ipfix_probe_map"`
 }
 
 func (m *xdpMaps) Close() error {
-	return _XdpClose()
+	return _XdpClose(
+		m.IpfixProbeMap,
+	)
 }
 
 // xdpPrograms contains all programs after they have been loaded into the kernel.

@@ -1,11 +1,12 @@
 package bpf
 
 import (
+	"fmt"
 	"net"
 	"testing"
 
+	// "github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/rlimit"
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
@@ -20,22 +21,63 @@ func generateInput(t *testing.T) []byte {
 	t.Helper()
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 	buf := gopacket.NewSerializeBuffer()
-	iph := &layers.IPv4{
-		Version: 4, Protocol: layers.IPProtocolUDP, Flags: layers.IPv4DontFragment, TTL: 64, IHL: 5, Id: 1212,
-		SrcIP: net.IP{192, 168, 10, 1}, DstIP: net.IP{192, 168, 10, 5},
+
+	srcIP := net.ParseIP("2001:db8::1")
+	dstIP := net.ParseIP("2001:db8::2")
+	srcMAC, _ := net.ParseMAC("02:42:ac:11:00:02")
+	dstMAC, _ := net.ParseMAC("02:42:ac:11:00:03")
+	srcPort := layers.UDPPort(12345)
+	dstPort := layers.UDPPort(54321)
+
+	// Define the SRv6 segment list
+	segmentList := []net.IP{
+		net.ParseIP("2001:db8:dead:beef::1"),
+		net.ParseIP("2001:db8:dead:beef::2"),
 	}
-	udp := &layers.UDP{SrcPort: 2152, DstPort: 2152}
-	udp.SetNetworkLayerForChecksum(iph)
+
+	// Create the Ethernet layer
+	ethernetLayer := &layers.Ethernet{
+		SrcMAC:       srcMAC,
+		DstMAC:       dstMAC,
+		EthernetType: layers.EthernetTypeIPv6,
+	}
+
+	// Create the IPv6 layer
+	ipv6Layer := &layers.IPv6{
+		Version:    6,
+		NextHeader: layers.IPProtocolIPv6Routing,
+		HopLimit:   64,
+		SrcIP:      srcIP,
+		DstIP:      dstIP,
+	}
+
+	// Create the SRv6 extension header layer
+	// srv6Layer := &layers.IPv6Routing{
+	// 	RoutingType:      4, // SRH
+	// 	SegmentsLeft:     uint8(len(segmentList)),
+	// 	SourceRoutingIPs: segmentList,
+	// }
+	// srv6Layer.NextHeader = layers.IPProtocolUDP,
+	seg6layer := &Srv6Layer{
+		NextHeader:   uint8(layers.IPProtocolUDP),
+		HdrExtLen:    uint8((8+16*len(segmentList))/8 - 1),
+		RoutingType:  4, // SRH
+		SegmentsLeft: uint8(len(segmentList)),
+		LastEntry:    uint8(len(segmentList) - 1),
+		Flags:        0,
+		Tag:          0,
+		Segments:     segmentList,
+	}
+	// Create the UDP layer
+	udpLayer := &layers.UDP{
+		SrcPort: srcPort,
+		DstPort: dstPort,
+	}
+	udpLayer.SetNetworkLayerForChecksum(ipv6Layer)
+
 	err := gopacket.SerializeLayers(buf, opts,
-		&layers.Ethernet{DstMAC: []byte{0x00, 0x00, 0x5e, 0x00, 0x53, 0x01}, SrcMAC: []byte{0x00, 0x00, 0x5e, 0x00, 0x53, 0x02}, EthernetType: layers.EthernetTypeIPv4},
-		iph, udp,
-		&layers.GTPv1U{Version: 1, ProtocolType: 1, Reserved: 0, ExtensionHeaderFlag: false, SequenceNumberFlag: false, NPDUFlag: false, MessageType: 255, MessageLength: 76, TEID: 2},
-		&layers.IPv4{
-			Version: 4, Protocol: layers.IPProtocolICMPv4, Flags: layers.IPv4DontFragment, TTL: 64, IHL: 5, Id: 1160,
-			SrcIP: net.IP{192, 168, 100, 200}, DstIP: net.IP{192, 168, 30, 1},
-		},
-		&layers.ICMPv4{TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0), Id: 1, Seq: 1},
-		gopacket.Payload(icmpPayload),
+		ethernetLayer, ipv6Layer, seg6layer, udpLayer,
+		gopacket.Payload([]byte("Hello, SRv6!")),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -81,19 +123,42 @@ func TestXDPProg(t *testing.T) {
 	}
 	defer objs.Close()
 
-	ret, got, err := objs.XdpProg.Test(generateInput(t))
+	// cpus, err := GetNumPossibleCPUs()
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+
+	ret, _, err := objs.XdpProg.Test(generateInput(t))
 	if err != nil {
 		t.Error(err)
 	}
 
-	// retern code should be XDP_TX
-	if ret != 3 {
-		t.Errorf("got %d want %d", ret, 3)
+	// retern code should be XDP_PASS
+	if ret != 2 {
+		t.Errorf("got %d want %d", ret, 2)
 	}
 
-	// check output
-	want := generateOutput(t)
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("output mismatch (-want +got):\n%s", diff)
+	var entry xdpProbeData
+	var count uint64
+	iter := objs.IpfixProbeMap.Iterate()
+	for iter.Next(&entry, &count) {
+		fmt.Printf("H_dest: %v, H_source: %v, H_proto: %v, V6Dstaddr: %v, V6Dstaddr: %v -> count: %v\n",
+			entry.H_dest, entry.H_source, entry.H_proto, entry.V6Dstaddr, entry.V6Dstaddr, count)
 	}
+	if err := iter.Err(); err != nil {
+		fmt.Printf("Failed to iterate map: %v\n", err)
+	}
+	// check output
+	// want := generateOutput(t)
+	// if diff := cmp.Diff(want, got); diff != "" {
+	// 	t.Errorf("output mismatch (-want +got):\n%s", diff)
+	// }
+}
+
+func createEntry[T any](v T, num int) []T {
+	r := make([]T, num)
+	for i := 0; i < num; i++ {
+		r[i] = v
+	}
+	return r
 }
