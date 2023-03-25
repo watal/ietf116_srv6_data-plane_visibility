@@ -21,7 +21,7 @@ static __always_inline void swap_src_dst_mac(void *data)
 		p[5] = dst[2];
 }
 
-SEC("xdp_pass")
+SEC("xdp")
 int xdp_prog(struct xdp_md *ctx) {
 	void *data_end = (void *)(long)ctx->data_end;
 	void *data = (void *)(long)ctx->data;

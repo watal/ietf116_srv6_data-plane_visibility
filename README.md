@@ -22,4 +22,6 @@ sudo apt install clang llvm libelf-dev build-essential linux-headers-amd64 linux
 
 ```shell
 go generate ./...
+
+make test
 ```
