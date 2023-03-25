@@ -1,10 +1,12 @@
 name: ietf116 
 
 topology:
+  kinds:
+    xrd:
+      image: ios-xr/xrd-control-plane:7.8.1
   nodes:
     pmacct:
       kind: linux
-      #image: wbitt/network-multitool:latest
       image: ubuntu:20.04
       exec:
         - "apt update"
@@ -30,6 +32,9 @@ topology:
       binds:
         - startup-configs/rt3/frr.conf:/etc/frr/frr.conf
         - startup-configs/rt3/daemons:/etc/frr/daemons
+    xrd: 
+      kind: xrd
+      startup-config: startup-configs/xrd/xrd.cfg
     host1:
       kind: linux
       image: wbitt/network-multitool:latest
@@ -53,6 +58,7 @@ topology:
     # SRv6 domain
     - endpoints: ["rt1:eth1", "rt2:eth1"]
     - endpoints: ["rt2:eth2", "rt3:eth1"]
+    - endpoints: ["rt3:eth4", "xrd:Gi0-0-0-0"]
     # customer hosts
     - endpoints: ["host1:eth1", "rt1:eth2"]
     - endpoints: ["host2:eth1", "rt3:eth2"]
@@ -61,3 +67,4 @@ topology:
     - endpoints: ["rt2:eth3", "switch:eth2"]
     - endpoints: ["rt3:eth3", "switch:eth3"]
     - endpoints: ["pmacct:eth1", "switch:eth4"]
+    - endpoints: ["xrd:Gi0-0-0-1", "switch:eth5"]
