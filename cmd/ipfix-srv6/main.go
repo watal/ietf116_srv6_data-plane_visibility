@@ -39,11 +39,7 @@ func main() {
 	}
 
 	// XDPプログラムを読み込む
-	objs := &bpf.ExamplePrograms{}
-	err = bpf.LoadExampleObjects(objs, nil)
-	if err := bpf.LoadExampleObjects(&objs, nil); err != nil {
-		log.Fatalf("Failed to load eBPF object file: %v\n", err)
-	}
+	objs, err := bpf.ReadXdpObjects(nil)
 	defer objs.Close()
 
 	// Attach the program.
