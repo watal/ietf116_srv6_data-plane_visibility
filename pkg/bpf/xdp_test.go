@@ -52,12 +52,6 @@ func generateInput(t *testing.T) []byte {
 	}
 
 	// Create the SRv6 extension header layer
-	// srv6Layer := &layers.IPv6Routing{
-	// 	RoutingType:      4, // SRH
-	// 	SegmentsLeft:     uint8(len(segmentList)),
-	// 	SourceRoutingIPs: segmentList,
-	// }
-	// srv6Layer.NextHeader = layers.IPProtocolUDP,
 	seg6layer := &Srv6Layer{
 		NextHeader:   uint8(layers.IPProtocolUDP),
 		HdrExtLen:    uint8((8+16*len(segmentList))/8 - 1),
@@ -123,11 +117,6 @@ func TestXDPProg(t *testing.T) {
 	}
 	defer objs.Close()
 
-	// cpus, err := GetNumPossibleCPUs()
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-
 	ret, _, err := objs.XdpProg.Test(generateInput(t))
 	if err != nil {
 		t.Error(err)
@@ -142,17 +131,11 @@ func TestXDPProg(t *testing.T) {
 	var count uint64
 	iter := objs.IpfixProbeMap.Iterate()
 	for iter.Next(&entry, &count) {
-		fmt.Printf("H_dest: %v, H_source: %v, H_proto: %v, V6Dstaddr: %v, V6Dstaddr: %v -> count: %v\n",
-			entry.H_dest, entry.H_source, entry.H_proto, entry.V6Dstaddr, entry.V6Dstaddr, count)
+		PrintEntrys(entry, count)
 	}
 	if err := iter.Err(); err != nil {
 		fmt.Printf("Failed to iterate map: %v\n", err)
 	}
-	// check output
-	// want := generateOutput(t)
-	// if diff := cmp.Diff(want, got); diff != "" {
-	// 	t.Errorf("output mismatch (-want +got):\n%s", diff)
-	// }
 }
 
 func createEntry[T any](v T, num int) []T {

@@ -5,18 +5,6 @@
 
 package main
 
-// import (
-// 	"fmt"
-// 	"os"
-// )
-//
-// func main() {
-// 	if len(os.Args) > 1 && os.Args[1] == "--version" {
-// 		fmt.Println("v0.0.1")
-// 		return
-// 	}
-// }
-
 import (
 	"log"
 	"net"
@@ -67,18 +55,3 @@ func main() {
 	// 	log.Printf("Map contents:\n%s", s)
 	// }
 }
-
-// func formatMapContents(m *ebpf.Map) (string, error) {
-// 	var (
-// 		sb  strings.Builder
-// 		key []byte
-// 		val uint32
-// 	)
-// 	iter := m.Iterate()
-// 	for iter.Next(&key, &val) {
-// 		sourceIP := net.IP(key) // IPv4 source address in network byte order.
-// 		packetCount := val
-// 		sb.WriteString(fmt.Sprintf("\t%s => %d\n", sourceIP, packetCount))
-// 	}
-// 	return sb.String(), iter.Err()
-// }
