@@ -8,7 +8,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags -target xdp ../../src/main.c -- -I /usr/include/x86_64-linux-gnu -I ../../src/
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -no-global-types -cc clang -cflags -target xdp ../../src/main.c -- -I /usr/include/x86_64-linux-gnu -I ../../src/
+
+type XdpProbeData struct {
+	H_dest    [6]uint8
+	H_source  [6]uint8
+	H_proto   uint16
+	_         [2]byte
+	V6Srcaddr struct{ In6U struct{ U6Addr8 [16]uint8 } }
+	V6Dstaddr struct{ In6U struct{ U6Addr8 [16]uint8 } }
+}
 
 func ReadXdpObjects(ops *ebpf.CollectionOptions) (*xdpObjects, error) {
 	obj := &xdpObjects{}
@@ -33,7 +42,7 @@ const (
 	XDP_REDIRECT
 )
 
-func PrintEntrys(entry xdpProbeData, count uint64) {
+func PrintEntrys(entry XdpProbeData, count uint64) {
 	mac := func(mac [6]uint8) string {
 		return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
 	}

@@ -13,15 +13,6 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-type xdpProbeData struct {
-	H_dest    [6]uint8
-	H_source  [6]uint8
-	H_proto   uint16
-	_         [2]byte
-	V6Srcaddr struct{ In6U struct{ U6Addr8 [16]uint8 } }
-	V6Dstaddr struct{ In6U struct{ U6Addr8 [16]uint8 } }
-}
-
 // loadXdp returns the embedded CollectionSpec for xdp.
 func loadXdp() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_XdpBytes)
