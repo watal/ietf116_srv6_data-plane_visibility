@@ -12,3 +12,14 @@
 * 参考になりそうなコード
     * [IPFIX (go)](https://github.com/wide-vsix/linux-flow-exporter)
     * [XDPでIngress/Egress Pachketにタイムスタンプ埋め込んでIn-band Telemetryやるやつ (python)](https://nttcom.enterprise.slack.com/files/U02FJ68CT7C/F0504EVEHEF/inband_timestamp.py)
+
+
+## prepare
+
+```shell
+sudo apt install clang llvm libelf-dev build-essential linux-headers-amd64 linux-libc-dev libbpf-dev
+```
+
+```shell
+go generate ./...
+```

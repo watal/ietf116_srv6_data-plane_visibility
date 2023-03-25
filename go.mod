@@ -1,4 +1,4 @@
-module github.com/nttcom-testbed/ietf116_srv6_data-plane_visibility
+module github.com/watal/ietf116_srv6_data-plane_visibility
 
 go 1.20
 
