@@ -35,11 +35,11 @@ int xdp_prog(struct xdp_md *ctx) {
    if (ipv6->nexthdr != IPPROTO_IPV6ROUTE)
         return XDP_PASS;
 
-    struct ipv6_rt_hdr *rt_hdr = (void *)(ipv6 + 1);
-    if ((void *)(rt_hdr + 1) > data_end)
+    struct srhhdr *srh = (void *)(ipv6 + 1);
+    if ((void *)(srh + 1) > data_end)
         return XDP_PASS;
 
-    if (rt_hdr->type != IPV6_SRCRT_TYPE_4)
+    if (srh->routingType != IPV6_SRCRT_TYPE_4)
         return XDP_PASS;
 
     struct probe_data key = {};
@@ -49,6 +49,7 @@ int xdp_prog(struct xdp_md *ctx) {
     key.h_proto = eth->h_proto;
     key.v6_srcaddr = ipv6->saddr;
     key.v6_dstaddr = ipv6->daddr;
+    key.srh = *srh;
 
     value = bpf_map_lookup_elem(&ipfix_probe_map, &key);
     if (!value) {
