@@ -5,6 +5,7 @@
 #include <linux/types.h>
 #include <linux/if_ether.h>
 #include <linux/in6.h> /* For struct in6_addr. */
+#include "xdp_consts.h"
 
 // Segment Routing Extension Header (SRH)
 // https://datatracker.ietf.org/doc/draft-ietf-6man-segment-routing-header/
@@ -28,7 +29,14 @@ struct probe_data {
 	__be16		    h_proto;
     struct in6_addr v6_srcaddr;
     struct in6_addr v6_dstaddr;
-    struct srhhdr srh;
+    __u8 nextHdr;
+    __u8 hdrExtLen;
+    __u8 routingType;
+    __u8 segmentsLeft;
+    __u8 lastEntry;
+    __u8 flags;
+    __u16 tag;
+    struct in6_addr segments[MAX_SEGMENTLIST_ENTRIES];
 };
 
 #endif

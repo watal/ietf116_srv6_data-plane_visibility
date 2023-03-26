@@ -11,7 +11,13 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -no-global-types -cc clang -cflags -target xdp ../../src/main.c -- -I /usr/include/x86_64-linux-gnu -I ../../src/
 
-type SrhType struct {
+type XdpProbeData struct {
+	H_dest       [6]uint8
+	H_source     [6]uint8
+	H_proto      uint16
+	_            [2]byte
+	V6Srcaddr    struct{ In6U struct{ U6Addr8 [16]uint8 } }
+	V6Dstaddr    struct{ In6U struct{ U6Addr8 [16]uint8 } }
 	NextHdr      uint8
 	HdrExtLen    uint8
 	RoutingType  uint8
@@ -19,17 +25,7 @@ type SrhType struct {
 	LastEntry    uint8
 	Flags        uint8
 	Tag          uint16
-	Segments     [0]struct{ In6U struct{ U6Addr8 [16]uint8 } }
-}
-
-type XdpProbeData struct {
-	H_dest    [6]uint8
-	H_source  [6]uint8
-	H_proto   uint16
-	_         [2]byte
-	V6Srcaddr struct{ In6U struct{ U6Addr8 [16]uint8 } }
-	V6Dstaddr struct{ In6U struct{ U6Addr8 [16]uint8 } }
-	Srh       SrhType
+	Segments     [10]struct{ In6U struct{ U6Addr8 [16]uint8 } }
 }
 
 func ReadXdpObjects(ops *ebpf.CollectionOptions) (*xdpObjects, error) {
@@ -66,5 +62,5 @@ func PrintEntrys(entry XdpProbeData, count uint64) {
 		"H_dest: %s, H_source: %v, H_proto: %v, V6Dstaddr: %v, V6Srcaddr: %v -> count: %v\n",
 		mac(entry.H_dest), mac(entry.H_source), entry.H_proto, daddr, saddr, count)
 
-	pp.Println(entry.Srh)
+	pp.Println(entry)
 }
