@@ -1,0 +1,70 @@
+name: ietf116 
+
+topology:
+  kinds:
+    xrd:
+      image: ios-xr/xrd-control-plane:7.8.1
+  nodes:
+    pmacct:
+      kind: linux
+      image: ubuntu:20.04
+      exec:
+        - "apt update"
+        - "apt install -y pmacct"
+        - "apt install -y iproute2"
+        - "apt install -y tcpdump"
+        - "ip -6 addr add fd00:ffff::ffff/64 dev eth1"
+    rt1:
+      kind: linux
+      image: frrouting/frr:v8.4.1
+      binds:
+        - startup-configs/rt1/frr.conf:/etc/frr/frr.conf
+        - startup-configs/rt1/daemons:/etc/frr/daemons
+    rt2:
+      kind: linux
+      image: frrouting/frr:v8.4.1
+      binds:
+        - startup-configs/rt2/frr.conf:/etc/frr/frr.conf
+        - startup-configs/rt2/daemons:/etc/frr/daemons
+    rt3:
+      kind: linux
+      image: frrouting/frr:v8.4.1
+      binds:
+        - startup-configs/rt3/frr.conf:/etc/frr/frr.conf
+        - startup-configs/rt3/daemons:/etc/frr/daemons
+    xrd: 
+      kind: xrd
+      startup-config: startup-configs/xrd/xrd.cfg
+    host1:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      exec:
+        - "ip -4 addr add 192.168.1.1/24 dev eth1"
+        - "ip -4 route add 192.168.2.0/24 via 192.168.1.254"
+        - "ip -6 addr add fd00:a1::1/64 dev eth1"
+        - "ip -6 route add fd00:a2::/64 via fd00:a1::ffff"
+    host2:
+      kind: linux
+      image: wbitt/network-multitool:latest
+      exec:
+        - "ip -4 addr add 192.168.2.1/24 dev eth1"
+        - "ip -4 route add 192.168.1.0/24 via 192.168.2.254"
+        - "ip -6 addr add fd00:a2::1/64 dev eth1"
+        - "ip -6 route add fd00:a1::/64 via fd00:a2::ffff"
+    switch:
+      kind: bridge
+
+  links:
+    # SRv6 domain
+    - endpoints: ["rt1:eth1", "rt2:eth1"]
+    - endpoints: ["rt2:eth2", "rt3:eth1"]
+    - endpoints: ["rt3:eth4", "xrd:Gi0-0-0-0"]
+    # customer hosts
+    - endpoints: ["host1:eth1", "rt1:eth2"]
+    - endpoints: ["host2:eth1", "rt3:eth2"]
+    # Switch
+    - endpoints: ["rt1:eth3", "switch:eth1"]
+    - endpoints: ["rt2:eth3", "switch:eth2"]
+    - endpoints: ["rt3:eth3", "switch:eth3"]
+    - endpoints: ["pmacct:eth1", "switch:eth4"]
+    - endpoints: ["xrd:Gi0-0-0-1", "switch:eth5"]

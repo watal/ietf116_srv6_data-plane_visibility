@@ -5,22 +5,12 @@
 
 package main
 
-// import (
-// 	"fmt"
-// 	"os"
-// )
-//
-// func main() {
-// 	if len(os.Args) > 1 && os.Args[1] == "--version" {
-// 		fmt.Println("v0.0.1")
-// 		return
-// 	}
-// }
-
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/watal/ietf116_srv6_data-plane_visibility/pkg/bpf"
@@ -55,30 +45,18 @@ func main() {
 	log.Printf("Attached XDP program to iface %q (index %d)", iface.Name, iface.Index)
 	log.Printf("Press Ctrl-C to exit and remove the program")
 
-	// // Print the contents of the BPF hash map (source IP address -> packet count).
-	// ticker := time.NewTicker(1 * time.Second)
-	// defer ticker.Stop()
-	// for range ticker.C {
-	// 	s, err := formatMapContents(objs.XdpStatsMap)
-	// 	if err != nil {
-	// 		log.Printf("Error reading map: %s", err)
-	// 		continue
-	// 	}
-	// 	log.Printf("Map contents:\n%s", s)
-	// }
+	// Print the contents of the BPF hash map (source IP address -> packet count).
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		var entry bpf.XdpProbeData
+		var count uint64
+		iter := objs.IpfixProbeMap.Iterate()
+		for iter.Next(&entry, &count) {
+			bpf.PrintEntrys(entry, count)
+		}
+		if err := iter.Err(); err != nil {
+			fmt.Printf("Failed to iterate map: %v\n", err)
+		}
+	}
 }
-
-// func formatMapContents(m *ebpf.Map) (string, error) {
-// 	var (
-// 		sb  strings.Builder
-// 		key []byte
-// 		val uint32
-// 	)
-// 	iter := m.Iterate()
-// 	for iter.Next(&key, &val) {
-// 		sourceIP := net.IP(key) // IPv4 source address in network byte order.
-// 		packetCount := val
-// 		sb.WriteString(fmt.Sprintf("\t%s => %d\n", sourceIP, packetCount))
-// 	}
-// 	return sb.String(), iter.Err()
-// }
