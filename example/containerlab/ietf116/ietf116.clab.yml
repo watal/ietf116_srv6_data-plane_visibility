@@ -22,7 +22,7 @@ topology:
         - startup-configs/rt1/daemons:/etc/frr/daemons
     rt2:
       kind: linux
-      image: frrouting/frr:v8.4.1
+      image: watal/frr:latest
       binds:
         - startup-configs/rt2/frr.conf:/etc/frr/frr.conf
         - startup-configs/rt2/daemons:/etc/frr/daemons
