@@ -22,13 +22,13 @@ struct srhhdr
     struct in6_addr segments[0];
 };
 
-
 struct probe_data {
 	__u8	h_dest[ETH_ALEN];
 	__u8	h_source[ETH_ALEN];
 	__be16		    h_proto;
     struct in6_addr v6_srcaddr;
     struct in6_addr v6_dstaddr;
+    struct srhhdr srh;
 };
 
 #endif

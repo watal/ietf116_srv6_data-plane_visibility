@@ -127,6 +127,7 @@ func TestXDPProg(t *testing.T) {
 		t.Errorf("got %d want %d", ret, 2)
 	}
 
+	fmt.Println("debug log")
 	var entry XdpProbeData
 	var count uint64
 	iter := objs.IpfixProbeMap.Iterate()
