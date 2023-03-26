@@ -14,6 +14,7 @@ import (
 
 	"github.com/cilium/ebpf/link"
 	"github.com/watal/ietf116_srv6_data-plane_visibility/pkg/bpf"
+	"github.com/watal/ietf116_srv6_data-plane_visibility/pkg/exporter"
 )
 
 func main() {
@@ -54,6 +55,8 @@ func main() {
 		iter := objs.IpfixProbeMap.Iterate()
 		for iter.Next(&entry, &count) {
 			bpf.PrintEntrys(entry, count)
+			message := exporter.NewMessage(entry))
+			exporter.SendMessage(message)
 		}
 		if err := iter.Err(); err != nil {
 			fmt.Printf("Failed to iterate map: %v\n", err)
