@@ -7,6 +7,10 @@ package ipfix
 
 import "encoding/binary"
 
+type Message struct { // RFC7011 3.
+	MessageHeader MessageHeader
+	Sets          []Set
+}
 type MessageHeader struct { // RFC7011 3.1
 	Version             uint16
 	Length              uint16
@@ -40,18 +44,55 @@ func (h *MessageHeader) Serialize() []uint8 {
 	return buf
 }
 
-func NewCommonHeader(messageType uint8, messageLength uint16) *MessageHeader {
+func NewMessageHeader(messageType uint8) *MessageHeader {
 	h := &MessageHeader{
-		Version:             uint16(1),
-		Length:              uint16(0),
-		ExportTime:          uint32(0),
-		SequenceNumber:      uint32(0),
-		ObsarvationDomainID: uint32(0),
+		Version:             uint16(10),
+		Length:              uint16(36),
+		ExportTime:          uint32(1654731771),
+		SequenceNumber:      uint32(190),
+		ObsarvationDomainID: uint32(33312),
 	}
 	return h
 }
 
-type FieldSpecifier struct {
+type Set struct { // RFC7011 3.3.1
+	SetHeader SetHeader
+	Records   []Record
+}
+
+type SetHeader struct { // RFC7011 3.3.2
+	SetID  uint16
+	Length uint16
+}
+
+func (h *SetHeader) DecodeFromBytes(header []uint8) error {
+	h.SetID = binary.BigEndian.Uint16(header[0:2])
+	h.Length = binary.BigEndian.Uint16(header[2:4])
+	return nil
+}
+
+func (h *SetHeader) Serialize() []uint8 {
+	buf := make([]uint8, 0, 4)
+	uint8Buf := make([]uint8, 2)
+	binary.BigEndian.PutUint16(uint8Buf, h.SetID)
+	buf = append(buf, uint8Buf...)
+	binary.BigEndian.PutUint16(uint8Buf, h.Length)
+	buf = append(buf, uint8Buf...)
+	return buf
+}
+
+func NewSetHeader(setID uint16, length uint16) *SetHeader {
+	return &SetHeader{
+		SetID:  uint16(setID), // always must be 3
+		Length: uint16(20),    // total length of sets, in bytes
+	}
+}
+
+type Record interface { // RFC7011 3.4
+	Serialize() ([]uint8, error)
+}
+
+type FieldSpecifier struct { // RFC7011 3.2
 	E                    bool
 	InformationElementID uint16
 	FieldLength          uint16
@@ -85,41 +126,63 @@ func (s *FieldSpecifier) Serialize() []uint8 {
 	return buf
 }
 
-func NewFieldSpecifier(messageType uint8, messageLength uint16) *MessageHeader {
-	h := &MessageHeader{
-		Version:             uint16(1),
-		Length:              uint16(0),
-		ExportTime:          uint32(0),
-		SequenceNumber:      uint32(0),
-		ObsarvationDomainID: uint32(0),
+func NewFieldSpecifier(ie uint16) *FieldSpecifier {
+	h := &FieldSpecifier{
+		E:                    true,
+		InformationElementID: uint16(36),
+		FieldLength:          uint16(0),
+		EnterpriseNumber:     uint32(191),
 	}
 	return h
 }
 
-type SetHeader struct {
-	SetID  uint16
-	Length uint16
+type TemplateRecord struct { // RFC7011 3.4.1
+	TemplateRecordHeader TemplateRecordHeader
+	FieldSpecifiers      []FieldSpecifier
 }
 
-func (h *SetHeader) DecodeFromBytes(header []uint8) error {
-	h.SetID = binary.BigEndian.Uint16(header[0:2])
-	h.Length = binary.BigEndian.Uint16(header[2:4])
+type TemplateRecordHeader struct { // RFC7011 3.4.1
+	TemplateID uint16
+	FieldCount uint16
+}
+
+func (h *TemplateRecordHeader) DecodeFromBytes(header []uint8) error {
+	h.TemplateID = binary.BigEndian.Uint16(header[0:2])
+	h.FieldCount = binary.BigEndian.Uint16(header[2:4])
 	return nil
 }
 
-func (h *SetHeader) Serialize() []uint8 {
+func (h *TemplateRecordHeader) Serialize() []uint8 {
 	buf := make([]uint8, 0, 4)
 	uint8Buf := make([]uint8, 2)
-	binary.BigEndian.PutUint16(uint8Buf, h.SetID)
+	binary.BigEndian.PutUint16(uint8Buf, h.TemplateID)
 	buf = append(buf, uint8Buf...)
-	binary.BigEndian.PutUint16(uint8Buf, h.Length)
+	binary.BigEndian.PutUint16(uint8Buf, h.FieldCount)
 	buf = append(buf, uint8Buf...)
 	return buf
 }
 
-func NewSetHeader(setID uint16, length uint16) *SetHeader {
-	return &SetHeader{
-		SetID:  setID,
-		Length: length,
+func NewTemplateRecordHeadersetID(uint16, length uint16) *TemplateRecordHeader {
+	return &TemplateRecordHeader{
+		TemplateID: 3,
+		FieldCount: 20,
 	}
+}
+
+type OptionsTemplateRecord struct { // RFC7011 3.4.2.2
+	OptionsTemplateRecordHeader OptionsTemplateRecordHeader
+	FieldSpecifiers             []FieldSpecifier
+}
+
+type OptionsTemplateRecordHeader struct { // RFC7011 3.4.2.2
+	TemplateID      uint16 // > 255
+	FieldCount      uint16
+	ScopeFieldCount uint16
+}
+
+type DataRecord struct { // RFC7011 3.4.3
+	FieldValues []FieldValue
+}
+
+type FieldValue struct {
 }

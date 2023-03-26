@@ -17,7 +17,7 @@
 ## prepare
 
 ```shell
-sudo apt install clang llvm libelf-dev build-essential linux-headers-amd64 linux-libc-dev libbpf-dev
+sudo apt install clang llvm libelf-dev build-essential gcc-multilib linux-libc-dev libbpf-dev
 ```
 
 ```shell
