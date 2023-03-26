@@ -79,33 +79,6 @@ func generateInput(t *testing.T) []byte {
 	return buf.Bytes()
 }
 
-func generateOutput(t *testing.T) []byte {
-	t.Helper()
-	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
-	buf := gopacket.NewSerializeBuffer()
-	iph := &layers.IPv4{
-		Version: 4, Protocol: layers.IPProtocolUDP, Flags: layers.IPv4DontFragment, TTL: 64, IHL: 5, Id: 1212,
-		SrcIP: net.IP{192, 168, 10, 1}, DstIP: net.IP{192, 168, 10, 5},
-	}
-	udp := &layers.UDP{SrcPort: 2152, DstPort: 2152}
-	udp.SetNetworkLayerForChecksum(iph)
-	err := gopacket.SerializeLayers(buf, opts,
-		&layers.Ethernet{DstMAC: []byte{0x00, 0x00, 0x5e, 0x00, 0x53, 0x02}, SrcMAC: []byte{0x00, 0x00, 0x5e, 0x00, 0x53, 0x01}, EthernetType: layers.EthernetTypeIPv4},
-		iph, udp,
-		&layers.GTPv1U{Version: 1, ProtocolType: 1, Reserved: 0, ExtensionHeaderFlag: false, SequenceNumberFlag: false, NPDUFlag: false, MessageType: 255, MessageLength: 76, TEID: 2},
-		&layers.IPv4{
-			Version: 4, Protocol: layers.IPProtocolICMPv4, Flags: layers.IPv4DontFragment, TTL: 64, IHL: 5, Id: 1160,
-			SrcIP: net.IP{192, 168, 100, 200}, DstIP: net.IP{192, 168, 30, 1},
-		},
-		&layers.ICMPv4{TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0), Id: 1, Seq: 1},
-		gopacket.Payload(icmpPayload),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return buf.Bytes()
-}
-
 func TestXDPProg(t *testing.T) {
 	if err := rlimit.RemoveMemlock(); err != nil {
 		t.Fatal(err)

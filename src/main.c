@@ -49,7 +49,25 @@ int xdp_prog(struct xdp_md *ctx) {
     key.h_proto = eth->h_proto;
     key.v6_srcaddr = ipv6->saddr;
     key.v6_dstaddr = ipv6->daddr;
-    key.srh = *srh;
+
+    key.nextHdr = srh->nextHdr;
+    key.hdrExtLen = srh->hdrExtLen;
+    key.routingType = srh->routingType;
+    key.segmentsLeft = srh->segmentsLeft;
+    key.lastEntry = srh->lastEntry;
+    key.flags = srh->flags;
+    key.tag = srh->tag;
+
+    for(int i=0; i<MAX_SEGMENTLIST_ENTRIES; i++ )
+    {   
+        if (!(i < key.lastEntry + 1) )
+           break;
+        
+        if ((void *)(data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) + sizeof(struct srhhdr) + sizeof(struct in6_addr) * (i + 1) + 1) > data_end)
+            break;
+
+        __builtin_memcpy(&key.segments[i], &srh->segments[i], sizeof(struct in6_addr));
+    }
 
     value = bpf_map_lookup_elem(&ipfix_probe_map, &key);
     if (!value) {
@@ -63,4 +81,4 @@ int xdp_prog(struct xdp_md *ctx) {
 	return XDP_PASS;
 }
 
-char _license[] SEC("license") = "MIT";
+char _license[] SEC("license") = "GPL";
